@@ -1,0 +1,51 @@
+### General ###
+jobtype: mp
+mode: training   # training / hparam_tuning / feature_filtration / prediction
+feature_filter_mode: one_by_one   # one_by_one / file / null
+seed: 42
+
+### Dataset ###
+path: database/mp
+sdf_file: database/mp/all.sdf
+data_file: database/mp/attr_train.csv
+weight_file: null
+default_feature:
+  ECFP:
+    enabled: True
+    radius: 2
+    nBits: 1024
+feature_list: [water_content,  H, C, O, 'N', F, S, Cl, Br, P,]
+target_list: ['mp']
+target_transform: LN   # LN / LG / E^-x
+batch_size: 32
+num_workers: 4
+split_method: random   # random / manual
+SPLIT_file: database/mp/split_20.npy
+train_size: 0.6
+val_size: 0.2
+
+### Model ###
+pretrained_model: null
+hidden_layer: [16]
+loss_fn: MAE   # MAE / MSE
+optimizer: Adam
+lr: 0.01
+scheduler:
+  type: ReduceLROnPlateau
+  factor: 0.7
+  patience: 20
+  min_lr: 0.00001
+
+### Training ###
+epoch_num: 10000
+output_step: 100
+model_save_step: 500
+early_stopping:
+  patience: 200
+  delta: 0
+criteria_list: ['MAE', 'ARD']
+optim_criteria: 'MAE'
+
+### Prediction ###
+dataset_range: test   # train / val / test / whole
+

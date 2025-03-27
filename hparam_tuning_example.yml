@@ -1,0 +1,40 @@
+### General ###
+optuna:
+  sampler:
+    type: TPESampler   # GridSampler / RandomSampler / TPESampler ...
+    seed: 42
+  pruner:
+    type: MedianPruner   # HyperbandPruner / ThresholdPruner / MedianPruner ...
+    n_warmup_steps: 20
+  direction: minimize
+  n_trials: 100
+  continue_trials:
+    continue: False
+    storage: null
+    study_name: null
+
+### Dataset ###
+batch_size:
+  type: int
+  low: 32
+  high: 256
+  step: 32
+
+### Model ###
+hidden_layer:
+  num_layers:
+    type: int
+    low: 1
+    high: 5
+  neuron:
+    type: int
+    low: 16
+    high: 256
+optimizer:
+  type: categorical
+  choices: [Adam, AdamW, SGD]
+lr:
+  type: loguniform
+  low: 0.0001
+  high: 0.01
+
