@@ -184,10 +184,11 @@ def training(param: ModelParams, ht_param: HparamTuningParams | None = None,
             error_dict['Overall']['LR'] = round(lr, 7)
             error_dict['Overall']['Loss'] = round(loss, 7)
 
-            for phase, loader in zip(
-                ['Train', 'Val', 'Test'],
-                [train_loader, val_loader, test_loader],
-            ):
+            loaders = [('Train', train_loader), ('Val', val_loader)]
+            if test_loader is not None:
+                loaders.append(('Test', test_loader))
+
+            for phase, loader in loaders:
                 evaluation = eval_class(loader, model)
                 pred, target = evaluation.pred, evaluation.target
                 err = Metrics(pred, target)
