@@ -14,7 +14,7 @@ from configs.schema import ModelParams
 
 # Keys compared between current and cached data config to decide if reprocessing is needed.
 _REPROCESS_KEYS = [
-    'sdf_file', 'data_file', 'weight_file', 'default_feature',
+    'data_file', 'weight_file', 'default_feature', 'smiles_column',
     'feature_list', 'target_list', 'target_transform',
 ]
 
@@ -58,8 +58,8 @@ class DataProcessing:
             data_file=p.data_file,
             feature_list=list(p.feature_list),
             target_list=list(p.target_list),
-            sdf_file=p.sdf_file,
             weight_file=p.weight_file,
+            smiles_column=p.smiles_column,
             ecfp=ecfp,
         )
         dataset = self._target_transform(dataset)

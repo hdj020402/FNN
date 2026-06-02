@@ -28,7 +28,7 @@ Copy `configs/model_parameters.example.yaml` to `configs/model_parameters.yaml` 
 | General | `mode` | `training` / `hpo` / `prediction` / `fine-tuning` |
 | General | `seed` | Random seed for reproducibility |
 | Dataset | `data_file` | CSV with features and targets |
-| Dataset | `sdf_file` | SDF file (required for ECFP fingerprints) |
+| Dataset | `smiles_column` | CSV column with SMILES (required for ECFP) |
 | Dataset | `feature_list` | Column names for input features |
 | Dataset | `target_list` | Column names for prediction targets |
 | Model | `hidden_layer` | List of hidden layer sizes, e.g. `[64, 32]` |

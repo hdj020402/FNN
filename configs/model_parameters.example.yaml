@@ -5,8 +5,8 @@ seed: 42
 
 ### Dataset ###
 path: database/mp
-sdf_file: database/mp/all.sdf
 data_file: database/mp/attr_train.csv
+smiles_column: SMILES   # CSV column with SMILES strings (used for ECFP)
 weight_file: null
 default_feature:
   ECFP:

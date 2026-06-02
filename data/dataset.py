@@ -1,6 +1,6 @@
 """Lightweight torch Dataset for FNN — no PyG dependency.
 
-Supports loading features/targets from CSV, with optional ECFP fingerprint generation from SDF.
+Loads features/targets from CSV, with optional ECFP fingerprint generation from SMILES.
 """
 import json
 import numpy as np
@@ -13,17 +13,20 @@ from rdkit.Chem import AllChem
 
 
 class FeatureDataset(Dataset):
-    """Dataset that loads features and targets from CSV, with optional ECFP generation.
+    """Dataset of ``(features, target, weight)`` tuples.
 
-    Each sample is a ``(features, target, weight)`` tuple of tensors.
+    Features are read from CSV columns.  ECFP fingerprints are optionally
+    generated from a SMILES column — no SDF / 3D coordinates needed.
 
     Args:
-        data_file: CSV file with feature and target columns.
-        feature_list: Column names to use as input features.
-        target_list: Column names to use as prediction targets.
-        sdf_file: SDF file for ECFP generation (required if ``ecfp`` is not None).
+        data_file: CSV with feature, target, and optionally SMILES columns.
+        feature_list: Column names for input features.
+        target_list: Column names for prediction targets.
         weight_file: JSON file with per-sample weights (optional).
-        ecfp: Dict with ``radius`` and ``nBits`` for ECFP fingerprints.  None to disable.
+        smiles_column: CSV column name containing SMILES strings.  Required
+            when ``ecfp`` is set; ignored otherwise.
+        ecfp: Dict with ``radius`` and ``nBits`` for ECFP fingerprints.
+            ``None`` to disable.
     """
 
     def __init__(
@@ -31,8 +34,8 @@ class FeatureDataset(Dataset):
         data_file: str,
         feature_list: list[str],
         target_list: list[str],
-        sdf_file: str | None = None,
         weight_file: str | None = None,
+        smiles_column: str | None = None,
         ecfp: dict | None = None,
     ):
         self.data_file = data_file
@@ -58,13 +61,21 @@ class FeatureDataset(Dataset):
         else:
             self.features = torch.empty(len(self.targets), 0)
 
-        # ECFP fingerprints
+        # ECFP from SMILES
         if ecfp is not None:
-            suppl = Chem.SDMolSupplier(sdf_file, removeHs=False, sanitize=False)
+            if smiles_column is None:
+                raise ValueError("smiles_column is required when ECFP is enabled.")
             radius = ecfp.get('radius', 2)
             nBits = ecfp.get('nBits', 1024)
+            smiles_series = database[smiles_column]
             fps = []
-            for mol in suppl:
+            for smi in smiles_series:
+                mol = Chem.MolFromSmiles(smi)
+                if mol is None:
+                    raise ValueError(
+                        f"RDKit could not parse SMILES: '{smi}'. "
+                        f"Check the '{smiles_column}' column in {data_file}."
+                    )
                 fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=nBits, useChirality=True)
                 fps.append(torch.tensor(fp, dtype=torch.float))
             ecfp_tensor = torch.stack(fps)  # [N, nBits]
@@ -89,7 +100,7 @@ class FeatureDataset(Dataset):
 
 
 class FeatureSubset(Subset):
-    """Subset that retains ``features``, ``targets``, ``weights`` tensor views for mean/std computation."""
+    """Subset that exposes ``features``, ``targets``, ``weights`` tensor views."""
 
     def __init__(self, dataset: FeatureDataset, indices: list[int]) -> None:
         super().__init__(dataset, indices)

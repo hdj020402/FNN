@@ -75,8 +75,8 @@ class ModelParams:
 
     # ── Dataset ───────────────────────────────────────────────────────────
     path: str = "data"
-    sdf_file: str = "data/all.sdf"
     data_file: str = "data/data.csv"
+    smiles_column: str | None = None     # CSV column with SMILES (for ECFP generation)
     weight_file: str | None = None
     default_feature: DefaultFeatureConfig = field(default_factory=DefaultFeatureConfig)
     feature_list: list[str] = field(default_factory=list)
