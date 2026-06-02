@@ -9,7 +9,6 @@ Entry point. Behaviour is determined by ``param.mode``:
 import os
 import time
 import json
-import logging
 import torch
 import optuna
 import pandas as pd
@@ -266,8 +265,9 @@ def cross_validation(param: ModelParams) -> None:
     """
     n_folds = param.n_folds
 
-    # ── Determine dataset size (lightweight — just read CSV row count) ────
-    n_samples = len(pd.read_csv(param.data_file))
+    # ── Determine dataset size (streaming line count — no CSV parsing) ──
+    with open(param.data_file) as f:
+        n_samples = sum(1 for _ in f) - 1  # header row
 
     folds = _kfold_indices(n_samples, n_folds, shuffle=True, seed=param.seed)
 
