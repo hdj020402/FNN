@@ -1,48 +1,74 @@
+"""Optuna study factory."""
 import optuna
 import logging
-from typing import Dict
+
+from configs.schema import ModelParams, HparamTuningParams
+
 
 class OptunaSetup:
-    def __init__(self, param: Dict, ht_param: Dict[str, Dict]) -> None:
+    """Create and configure an Optuna study from HPO configuration.
+
+    Args:
+        param: ModelParams configuration.
+        ht_param: HparamTuningParams configuration.
+    """
+
+    def __init__(self, param: ModelParams, ht_param: HparamTuningParams) -> None:
         self.param = param
         self.ht_param = ht_param
 
     def create_pruner(self) -> optuna.pruners.BasePruner:
-        pruner = getattr(optuna.pruners, self.ht_param['optuna']['pruner']['type'])
-        pruner_kwargs = {k: v for k, v in self.ht_param['optuna']['pruner'].items() if k != 'type'}
-        return pruner(**pruner_kwargs)
+        """Create an Optuna pruner from config."""
+        pruner_cfg = self.ht_param.optuna.pruner
+        pruner = getattr(optuna.pruners, pruner_cfg.type)
+        kwargs = {'n_warmup_steps': pruner_cfg.n_warmup_steps}
+        return pruner(**kwargs)
 
     def create_sampler(self) -> optuna.samplers.BaseSampler:
-        sampler = getattr(optuna.samplers, self.ht_param['optuna']['sampler']['type'])
-        sampler_kwargs = {k: v for k, v in self.ht_param['optuna']['sampler'].items() if k != 'type'}
-        return sampler(**sampler_kwargs)
+        """Create an Optuna sampler from config."""
+        sampler_cfg = self.ht_param.optuna.sampler
+        sampler = getattr(optuna.samplers, sampler_cfg.type)
+        kwargs = {'seed': sampler_cfg.seed}
+        return sampler(**kwargs)
 
     def create_study(self, study_name: str, storage: str) -> optuna.Study:
-        if self.ht_param['optuna']['continue_trials']['continue'] is False:
-            return optuna.create_study(
-                sampler=self.create_sampler(),
-                pruner=self.create_pruner(),
-                direction=self.ht_param['optuna']['direction'],
-                study_name=study_name,
-                storage=storage,
-                load_if_exists=True
-                )
-        else:
-            return self.load_study()
+        """Create or resume an Optuna study.
 
-    def logging_setup(self, hptuning_logger: logging.Logger) -> None:
+        Args:
+            study_name: Name for the study.
+            storage: SQLite storage URL.
+
+        Returns:
+            An Optuna Study instance.
+        """
+        ct = self.ht_param.optuna.continue_trials
+        if ct.continue_:
+            return self._load_study()
+
+        return optuna.create_study(
+            sampler=self.create_sampler(),
+            pruner=self.create_pruner(),
+            direction=self.ht_param.optuna.direction,
+            study_name=study_name,
+            storage=storage,
+            load_if_exists=True,
+        )
+
+    def _load_study(self) -> optuna.Study:
+        """Resume an existing study."""
+        ct = self.ht_param.optuna.continue_trials
+        storage = ct.storage
+        study_name = ct.study_name
+        if study_name is None:
+            summaries = optuna.get_all_study_summaries(storage=storage)
+            study_name = summaries[0].study_name
+        return optuna.load_study(study_name=study_name, storage=storage)
+
+    @staticmethod
+    def logging_setup(hpo_logger: logging.Logger) -> None:
+        """Route Optuna's own logger into the job's training logger."""
         optuna_logger = logging.getLogger('optuna')
         optuna_logger.handlers = []
-
-        optuna_logger.addHandler(hptuning_logger.handlers[0])
+        optuna_logger.addHandler(hpo_logger.handlers[0])
         optuna_logger.setLevel(logging.INFO)
-
         optuna_logger.propagate = False
-
-    def load_study(self):
-        storage = self.ht_param['optuna']['continue_trials']['storage']
-        study_name = self.ht_param['optuna']['continue_trials']['study_name']
-        if study_name is None:
-            study_summaries = optuna.get_all_study_summaries(storage=storage)
-            study_name = study_summaries[0].study_name
-        return optuna.load_study(study_name=study_name, storage=storage)
