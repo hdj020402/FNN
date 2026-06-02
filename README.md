@@ -21,7 +21,7 @@ pip install -r requirements.txt
 
 ### 3. Configure
 
-Create `model_parameters.yml` (see `model_parameters_example.yml`) in the project root. Key settings:
+Copy `configs/model_parameters.example.yaml` to `configs/model_parameters.yaml` and edit. Key settings:
 
 | Section | Key | Description |
 | --- | --- | --- |
@@ -42,7 +42,7 @@ All modes use the same entry point:
 
 ```bash
 python main.py               # training (default)
-python main.py               # hpo (set mode=hpo in yml + create hparam_tuning.yml)
+python main.py               # hpo (set mode=hpo + copy configs/hpo.example.yaml → configs/hpo.yaml)
 python main.py               # prediction (set mode=prediction)
 python main.py               # fine-tuning (set mode=fine-tuning)
 ```
@@ -82,10 +82,12 @@ outputs/
 fnn/
 ├── main.py                       # Entry point
 ├── configs/
-│   └── schema.py                 # Typed configuration dataclasses
+│   ├── schema.py                         # Typed configuration dataclasses
+│   ├── model_parameters.example.yaml     # Example model config
+│   └── hpo.example.yaml                  # Example HPO config
 ├── data/
-│   ├── dataset.py                # PyG CustomDataset + CustomSubset
-│   └── data_processing.py        # Data loading, splitting, normalization
+│   ├── dataset.py                        # FeatureDataset + FeatureSubset
+│   └── data_processing.py                # Data loading, splitting, normalization
 ├── models/
 │   ├── fnn.py                    # FNN module
 │   └── factory.py                # Model creation factory
@@ -103,11 +105,9 @@ fnn/
 │   ├── visualization.py          # Scatter, histogram, bar, loss curves
 │   ├── post_processing.py        # Log parsing
 │   └── utils.py                  # Misc helpers
-├── model_parameters_example.yml
-├── hparam_tuning_example.yml
 └── README.md
 ```
 
 ## Documentation
 
-See `model_parameters_example.yml` for all configuration options with comments.
+See `configs/model_parameters.example.yaml` for all configuration options with comments.

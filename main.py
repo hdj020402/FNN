@@ -355,7 +355,7 @@ def hpo(param: ModelParams, ht_param: HparamTuningParams) -> None:
 if __name__ == '__main__':
     TIME = time.strftime('%b_%d_%Y_%H%M%S', time.localtime())
 
-    param = ModelParams.from_yaml('model_parameters.yml')
+    param = ModelParams.from_yaml('configs/model_parameters.yaml')
     param.time = TIME
 
     setup_seed(param.seed, param.use_deterministic)
@@ -368,7 +368,7 @@ if __name__ == '__main__':
     if param.mode in ['training', 'fine-tuning']:
         training(param)
     elif param.mode == 'hpo':
-        ht_param = HparamTuningParams.from_yaml('hparam_tuning.yml')
+        ht_param = HparamTuningParams.from_yaml('configs/hpo.yaml')
         hpo(param, ht_param)
     elif param.mode == 'prediction':
         prediction(param)
