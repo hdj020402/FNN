@@ -60,6 +60,7 @@ class DataProcessing:
             target_list=list(p.target_list),
             weight_file=p.weight_file,
             smiles_column=p.smiles_column,
+            mol_format=p.mol_format,
             ecfp=ecfp,
         )
         dataset = self._target_transform(dataset)

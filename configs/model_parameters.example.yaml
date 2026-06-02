@@ -6,7 +6,8 @@ seed: 42
 ### Dataset ###
 path: database/mp
 data_file: database/mp/attr_train.csv
-smiles_column: SMILES   # CSV column with SMILES strings (used for ECFP)
+smiles_column: SMILES   # CSV column with SMILES/InChI strings (used for ECFP)
+mol_format: smiles   # smiles / inchi
 weight_file: null
 default_feature:
   ECFP:
