@@ -45,6 +45,7 @@ scheduler:
   min_lr: 0.00001
 
 ### Training ###
+n_folds: 1   # 1 = single training; 5 = 5-fold cross-validation
 accumulation_step: 1
 epoch_num: 10000
 output_step: 100

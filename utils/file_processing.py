@@ -94,12 +94,14 @@ class FileProcessing:
         param: ModelParams,
         ht_param: HparamTuningParams | None = None,
         trial: optuna.Trial | None = None,
+        output_subdir: str | None = None,
     ) -> None:
         self.param = param
         self.TIME = param.time
         self.jobtype = param.jobtype
         self.ht_param = ht_param
         self.trial = trial
+        self._output_subdir = output_subdir
 
     def pre_make(self) -> None:
         """Create output directory structure and set up loggers."""
@@ -125,6 +127,8 @@ class FileProcessing:
             self._base_dir = f'outputs/hpo/{self.jobtype}/{self.TIME}'
         else:
             self._base_dir = f'outputs/training/{self.jobtype}/{self.TIME}'
+        if self._output_subdir:
+            self._base_dir = f'{self._base_dir}/{self._output_subdir}'
 
         # ── Build per-mode structure ──────────────────────────────────────
         if mode == 'prediction':
@@ -254,7 +258,7 @@ class FileProcessing:
             logger = self.prediction_logger
             logger.info(f"hostname: {socket.gethostname()}")
             logger.info(f"data_path: {os.path.abspath(self.param.path)}")
-            logger.info(json.dumps({k: getattr(self.param, k, None) for k in _RECORD_KEYS}))
+            logger.info(f"config saved to: {self._base_dir}/model_parameters.yml")
             logger.info(f"num features: {dataset.num_features}, num targets: {dataset.num_targets}")
             logger.info(f"dataset size: {len(dataset)}")
             logger.info(f"size of pred set: {len(pred_loader.dataset)}")
@@ -269,7 +273,7 @@ class FileProcessing:
             logger = self.training_logger
             logger.info(f"hostname: {socket.gethostname()}")
             logger.info(f"data_path: {os.path.abspath(self.param.path)}")
-            logger.info(json.dumps({k: getattr(self.param, k, None) for k in _RECORD_KEYS}))
+            logger.info(f"config saved to: {self._base_dir}/model_parameters.yml")
             logger.info(f"num features: {dataset.num_features}, num targets: {dataset.num_targets}")
             logger.info(f"dataset size: {len(dataset)}")
             logger.info(f"size of test set: {len(test_loader.dataset)}")

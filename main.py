@@ -12,6 +12,7 @@ import json
 import torch
 import optuna
 import pandas as pd
+import numpy as np
 from copy import deepcopy
 from functools import partial
 
@@ -29,6 +30,28 @@ from utils.save_model import SaveModel
 from utils.timer import Timer
 from utils.gpu_monitor import GPUMonitor
 from utils.utils import extract_keys_and_lists
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Helpers
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _kfold_indices(n_samples: int, n_folds: int, shuffle: bool = True,
+                   seed: int = 42) -> list[tuple[list[int], list[int]]]:
+    """Generate k-fold train/val index pairs without sklearn dependency."""
+    indices = list(range(n_samples))
+    if shuffle:
+        rng = np.random.default_rng(seed)
+        rng.shuffle(indices)
+    fold_size = n_samples // n_folds
+    folds = []
+    for i in range(n_folds):
+        start = i * fold_size
+        end = start + fold_size if i < n_folds - 1 else n_samples
+        val_idx = indices[start:end]
+        train_idx = indices[:start] + indices[end:]
+        folds.append((train_idx, val_idx))
+    return folds
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -84,18 +107,24 @@ def _handle_hidden_layer(trial: optuna.Trial, attr: dict) -> list[int]:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def training(param: ModelParams, ht_param: HparamTuningParams | None = None,
-             trial: optuna.Trial | None = None) -> float:
-    """Run training (or a single HPO trial).
+             trial: optuna.Trial | None = None,
+             fold_indices: tuple[list[int], list[int]] | None = None,
+             output_subdir: str | None = None) -> float:
+    """Run training (or a single HPO trial, or a single CV fold).
 
     Args:
         param: Model configuration.
         ht_param: HPO configuration (only for HPO mode).
         trial: Optuna trial (only inside an HPO study).
+        fold_indices: ``(train_idx, val_idx)`` for one CV fold.  ``None`` for
+            normal (non-CV) training.
+        output_subdir: Subdirectory under the training output root (e.g.
+            ``'fold_0'``).  ``None`` for normal training.
 
     Returns:
         Best validation loss.
     """
-    fp = FileProcessing(param, ht_param, trial)
+    fp = FileProcessing(param, ht_param, trial, output_subdir=output_subdir)
     fp.pre_make()
     plot_dir, model_dir, ckpt_dir = fp.plot_dir, fp.model_dir, fp.ckpt_dir
     training_logger = fp.training_logger
@@ -112,7 +141,7 @@ def training(param: ModelParams, ht_param: HparamTuningParams | None = None,
 
     dp_timer = Timer()
     dp_timer.start()
-    dp = DataProcessing(param)
+    dp = DataProcessing(param, fold_indices=fold_indices)
     dataset = dp.dataset
     norm_dict = dp.norm_dict
     train_loader = dp.train_loader
@@ -223,6 +252,61 @@ def training(param: ModelParams, ht_param: HparamTuningParams | None = None,
         )
 
     return model_saving.best_val_loss
+
+
+def cross_validation(param: ModelParams) -> None:
+    """Run k-fold cross-validation.
+
+    For each fold the model is trained from scratch with its own
+    normalisation.  Results are aggregated in the common output directory.
+
+    Args:
+        param: Model configuration (``n_folds`` must be > 1).
+    """
+    n_folds = param.n_folds
+
+    # ── Build the dataset once to know its length ─────────────────────────
+    dp0 = DataProcessing(param)
+    n_samples = len(dp0.dataset)
+
+    folds = _kfold_indices(n_samples, n_folds, shuffle=True, seed=param.seed)
+
+    # ── Output setup ──────────────────────────────────────────────────────
+    from utils.file_processing import _setup_logger
+    import logging
+    base_dir = f'outputs/training/{param.jobtype}/{param.time}'
+    os.makedirs(base_dir, exist_ok=True)
+    param.to_yaml(f'{base_dir}/model_parameters.yml')
+    summary_logger = _setup_logger(f'cv_summary_{param.time}', f'{base_dir}/cv_summary.log')
+    summary_logger.info(f'jobtype: {param.jobtype}')
+    summary_logger.info(f'n_folds: {n_folds}')
+    summary_logger.info(f'dataset size: {n_samples}')
+    summary_logger.info(f'optim_criteria: {param.optim_criteria}')
+
+    fold_results: list[float] = []
+
+    for fold, (train_idx, val_idx) in enumerate(folds):
+        summary_logger.info(f'--- Fold {fold + 1}/{n_folds} ---')
+        fold_param = deepcopy(param)
+        fold_param.time = param.time
+
+        result = training(fold_param, fold_indices=(train_idx, val_idx),
+                          output_subdir=f'fold_{fold}')
+        fold_results.append(result)
+
+        summary_logger.info(
+            f'Fold {fold + 1} best {param.optim_criteria}: {result:.7f}'
+        )
+
+    # ── Summary ───────────────────────────────────────────────────────────
+    arr = np.array(fold_results)
+    summary_logger.info('=== CV Summary ===')
+    for i, v in enumerate(fold_results):
+        summary_logger.info(f'  Fold {i + 1}: {v:.7f}')
+    summary_logger.info(f'  Mean  : {arr.mean():.7f}')
+    summary_logger.info(f'  Std   : {arr.std():.7f}')
+    summary_logger.info(f'  Min   : {arr.min():.7f}')
+    summary_logger.info(f'  Max   : {arr.max():.7f}')
 
 
 def prediction(param: ModelParams) -> None:
@@ -366,7 +450,10 @@ if __name__ == '__main__':
         torch.cuda.set_per_process_memory_fraction(param.GPU_memo_frac)
 
     if param.mode in ['training', 'fine-tuning']:
-        training(param)
+        if param.n_folds > 1:
+            cross_validation(param)
+        else:
+            training(param)
     elif param.mode == 'hpo':
         ht_param = HparamTuningParams.from_yaml('configs/hpo.yaml')
         hpo(param, ht_param)

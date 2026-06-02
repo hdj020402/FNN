@@ -17,11 +17,19 @@ class DataProcessing:
         param: ModelParams configuration.
     """
 
-    def __init__(self, param: ModelParams) -> None:
+    def __init__(self, param: ModelParams,
+                 fold_indices: tuple[list[int], list[int]] | None = None) -> None:
         self.param = param
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.dataset = self._gen_dataset()
-        self.train_dataset, self.val_dataset, self.test_dataset, self.pred_dataset = self._split_dataset()
+        if fold_indices is not None:
+            train_idx, val_idx = fold_indices
+            self.train_dataset = FeatureSubset(self.dataset, train_idx)
+            self.val_dataset = FeatureSubset(self.dataset, val_idx)
+            self.test_dataset = self.val_dataset       # CV has no separate test set
+            self.pred_dataset = self.dataset
+        else:
+            self.train_dataset, self.val_dataset, self.test_dataset, self.pred_dataset = self._split_dataset()
         self.norm_dict = self._get_mean_std()
         self._normalization()
         self.train_loader, self.val_loader, self.test_loader, self.pred_loader = self._gen_loaders()

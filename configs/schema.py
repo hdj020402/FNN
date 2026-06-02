@@ -120,6 +120,7 @@ class ModelParams:
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
 
     # ── Training ──────────────────────────────────────────────────────────
+    n_folds: int = 1                    # 1 = single training; >1 = k-fold CV
     accumulation_step: int = 1
     epoch_num: int = 200
     output_step: int = 1
