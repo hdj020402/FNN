@@ -2,7 +2,6 @@
 **/__pycache__/
 outputs/
 log/
-**/processed/
 *.png
 test.ipynb
 **/result_processing/

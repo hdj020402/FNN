@@ -2,21 +2,12 @@
 
 Uses standard ``torch.utils.data`` (no PyG dependency).
 """
-import os
-import yaml
 import torch
 import numpy as np
 from torch.utils.data import random_split, DataLoader
 
 from data.dataset import FeatureDataset, FeatureSubset
 from configs.schema import ModelParams
-
-
-# Keys compared between current and cached data config to decide if reprocessing is needed.
-_REPROCESS_KEYS = [
-    'data_file', 'weight_file', 'default_feature',
-    'feature_list', 'target_list', 'target_transform',
-]
 
 
 class DataProcessing:
@@ -29,23 +20,11 @@ class DataProcessing:
     def __init__(self, param: ModelParams) -> None:
         self.param = param
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.reprocess = self._should_reprocess()
         self.dataset = self._gen_dataset()
         self.train_dataset, self.val_dataset, self.test_dataset, self.pred_dataset = self._split_dataset()
         self.norm_dict = self._get_mean_std()
         self._normalization()
         self.train_loader, self.val_loader, self.test_loader, self.pred_loader = self._gen_loaders()
-
-    def _should_reprocess(self) -> bool:
-        """Return True if dataset-affecting params changed since last processing."""
-        try:
-            cache = os.path.join(self.param.path, 'processed/model_parameters.yml')
-            with open(cache, 'r', encoding='utf-8') as f:
-                cached: dict = yaml.full_load(f)
-            current = {k: getattr(self.param, k, None) for k in _REPROCESS_KEYS}
-            return current != {k: cached.get(k) for k in _REPROCESS_KEYS}
-        except Exception:
-            return True
 
     def _gen_dataset(self) -> FeatureDataset:
         """Create the FeatureDataset from config."""
@@ -60,9 +39,6 @@ class DataProcessing:
             rdkit=rdkit_cfg,
         )
         dataset = self._target_transform(dataset)
-
-        os.makedirs(os.path.join(p.path, 'processed'), exist_ok=True)
-        self.param.to_yaml(os.path.join(p.path, 'processed/model_parameters.yml'))
         return dataset
 
     def _build_rdkit_config(self) -> dict | None:
