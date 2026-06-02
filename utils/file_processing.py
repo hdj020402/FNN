@@ -276,7 +276,7 @@ class FileProcessing:
             logger.info(f"config saved to: {self._base_dir}/model_parameters.yml")
             logger.info(f"num features: {dataset.num_features}, num targets: {dataset.num_targets}")
             logger.info(f"dataset size: {len(dataset)}")
-            logger.info(f"size of test set: {len(test_loader.dataset) if test_loader else 'N/A (CV)'}")
+            logger.info(f"size of test set: {len(test_loader.dataset)}")
             logger.info(f"size of val set: {len(val_loader.dataset)}")
             logger.info(f"size of training set: {len(train_loader.dataset)}")
             logger.info(f"batch size: {train_loader.batch_size}")

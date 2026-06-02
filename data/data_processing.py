@@ -26,7 +26,7 @@ class DataProcessing:
             train_idx, val_idx = fold_indices
             self.train_dataset = FeatureSubset(self.dataset, train_idx)
             self.val_dataset = FeatureSubset(self.dataset, val_idx)
-            self.test_dataset = None                    # CV: no separate test set
+            self.test_dataset = FeatureSubset(self.dataset, [])  # CV: no test set
             self.pred_dataset = self.dataset
         else:
             self.train_dataset, self.val_dataset, self.test_dataset, self.pred_dataset = self._split_dataset()
@@ -118,7 +118,7 @@ class DataProcessing:
         )
         train_loader = DataLoader(self.train_dataset, shuffle=True, **dl_kwargs)
         val_loader = DataLoader(self.val_dataset, shuffle=False, **dl_kwargs)
-        test_loader = DataLoader(self.test_dataset, shuffle=False, **dl_kwargs) if self.test_dataset is not None else None
+        test_loader = DataLoader(self.test_dataset, shuffle=False, **dl_kwargs)
         pred_loader = DataLoader(self.pred_dataset, shuffle=False, **dl_kwargs)
         return train_loader, val_loader, test_loader, pred_loader
 
