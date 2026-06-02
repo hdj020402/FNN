@@ -23,10 +23,10 @@ class FeatureDataset(Dataset):
         feature_list: Column names for input features.
         target_list: Column names for prediction targets.
         weight_file: JSON file with per-sample weights (optional).
-        smiles_column: CSV column name containing SMILES (or InChI) strings.
+        mol_column: CSV column name containing SMILES (or InChI) strings.
             Required when ``ecfp`` is set; ignored otherwise.
         mol_format: ``'smiles'`` or ``'inchi'`` — how to parse the strings in
-            ``smiles_column``.
+            ``mol_column``.
         ecfp: Dict with ``radius`` and ``nBits`` for ECFP fingerprints.
             ``None`` to disable.
     """
@@ -37,7 +37,7 @@ class FeatureDataset(Dataset):
         feature_list: list[str],
         target_list: list[str],
         weight_file: str | None = None,
-        smiles_column: str | None = None,
+        mol_column: str | None = None,
         mol_format: str = "smiles",
         ecfp: dict | None = None,
     ):
@@ -66,13 +66,13 @@ class FeatureDataset(Dataset):
 
         # ECFP from SMILES / InChI
         if ecfp is not None:
-            if smiles_column is None:
-                raise ValueError("smiles_column is required when ECFP is enabled.")
+            if mol_column is None:
+                raise ValueError("mol_column is required when ECFP is enabled.")
             if mol_format not in ('smiles', 'inchi'):
                 raise ValueError(f"Unknown mol_format '{mol_format}'. Use 'smiles' or 'inchi'.")
             radius = ecfp.get('radius', 2)
             nBits = ecfp.get('nBits', 1024)
-            raw_series = database[smiles_column]
+            raw_series = database[mol_column]
             fps = []
             for raw in raw_series:
                 if mol_format == 'smiles':
@@ -82,7 +82,7 @@ class FeatureDataset(Dataset):
                 if mol is None:
                     raise ValueError(
                         f"RDKit could not parse {mol_format}: '{raw}'. "
-                        f"Check the '{smiles_column}' column in {data_file}."
+                        f"Check the '{mol_column}' column in {data_file}."
                     )
                 fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=nBits, useChirality=True)
                 fps.append(torch.tensor(fp, dtype=torch.float))

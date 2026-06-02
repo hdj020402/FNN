@@ -76,7 +76,7 @@ class ModelParams:
     # ── Dataset ───────────────────────────────────────────────────────────
     path: str = "data"
     data_file: str = "data/data.csv"
-    smiles_column: str | None = None     # CSV column with SMILES or InChI (for ECFP generation)
+    mol_column: str | None = None       # CSV column with SMILES/InChI (for ECFP generation)
     mol_format: str = "smiles"           # smiles / inchi
     weight_file: str | None = None
     default_feature: DefaultFeatureConfig = field(default_factory=DefaultFeatureConfig)
