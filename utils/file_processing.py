@@ -16,18 +16,6 @@ from utils.save_model import SaveModel
 from utils.timer import Timer
 
 
-# Config keys included in run-record files.
-_RECORD_KEYS = [
-    'mode', 'seed', 'use_deterministic', 'GPU_memo_frac',
-    'pretrained_model', 'time', 'jobtype',
-    'path', 'sdf_file', 'data_file', 'weight_file',
-    'feature_list', 'target_list', 'target_transform',
-    'batch_size', 'num_workers', 'split_method', 'split_file',
-    'train_size', 'val_size', 'dataset_range',
-    'hidden_layer', 'loss_fn', 'optimizer', 'lr', 'scheduler',
-    'accumulation_step', 'epoch_num', 'output_step', 'model_save_step',
-    'early_stopping', 'criteria_list', 'optim_criteria',
-]
 
 
 def _setup_logger(logger_name: str, log_file: str, level: int = logging.INFO) -> logging.Logger:
@@ -198,6 +186,31 @@ class FileProcessing:
             f'gpu_{self.TIME}_logger',
             f'{os.path.dirname(self.log_file)}/gpu_monitor.log',
         )
+
+    def setup_cv_summary(self, n_samples: int) -> logging.Logger:
+        """Set up output directory and logger for a k-fold CV run (summary level).
+
+        Creates the base CV output directory with a copy of the config and
+        returns a logger for the CV summary log.  Individual folds use the
+        normal training path via ``output_subdir``.
+
+        Args:
+            n_samples: Total number of samples in the dataset.
+
+        Returns:
+            Logger for writing ``cv_summary.log``.
+        """
+        base_dir = f'outputs/training/{self.jobtype}/{self.TIME}'
+        os.makedirs(base_dir, exist_ok=True)
+        self.param.to_yaml(f'{base_dir}/model_parameters.yml')
+        logger = _setup_logger(
+            f'cv_summary_{self.TIME}', f'{base_dir}/cv_summary.log',
+        )
+        logger.info(f'jobtype: {self.jobtype}')
+        logger.info(f'n_folds: {self.param.n_folds}')
+        logger.info(f'dataset size: {n_samples}')
+        logger.info(f'optim_criteria: {self.param.optim_criteria}')
+        return logger
 
     # ── Parameter counting ─────────────────────────────────────────────────
 

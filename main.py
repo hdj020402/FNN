@@ -25,7 +25,7 @@ from utils.evaluation import Evaluation
 from utils.metrics import Metrics
 from utils.optuna_setup import OptunaSetup
 from utils.train import train, validate
-from utils.file_processing import FileProcessing, LogParser, _setup_logger
+from utils.file_processing import FileProcessing, LogParser
 from utils.save_model import SaveModel
 from utils.timer import Timer
 from utils.gpu_monitor import GPUMonitor
@@ -272,14 +272,7 @@ def cross_validation(param: ModelParams) -> None:
     folds = _kfold_indices(n_samples, n_folds, shuffle=True, seed=param.seed)
 
     # ── Output setup ──────────────────────────────────────────────────────
-    base_dir = f'outputs/training/{param.jobtype}/{param.time}'
-    os.makedirs(base_dir, exist_ok=True)
-    param.to_yaml(f'{base_dir}/model_parameters.yml')
-    summary_logger = _setup_logger(f'cv_summary_{param.time}', f'{base_dir}/cv_summary.log')
-    summary_logger.info(f'jobtype: {param.jobtype}')
-    summary_logger.info(f'n_folds: {n_folds}')
-    summary_logger.info(f'dataset size: {n_samples}')
-    summary_logger.info(f'optim_criteria: {param.optim_criteria}')
+    summary_logger = FileProcessing(param).setup_cv_summary(n_samples)
 
     fold_results: list[float] = []
 
