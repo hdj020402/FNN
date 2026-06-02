@@ -14,7 +14,7 @@ from configs.schema import ModelParams
 
 # Keys compared between current and cached data config to decide if reprocessing is needed.
 _REPROCESS_KEYS = [
-    'data_file', 'weight_file', 'default_feature', 'mol_column',
+    'data_file', 'weight_file', 'default_feature',
     'feature_list', 'target_list', 'target_transform',
 ]
 
@@ -50,25 +50,43 @@ class DataProcessing:
     def _gen_dataset(self) -> FeatureDataset:
         """Create the FeatureDataset from config."""
         p = self.param
-        ecfp = None
-        if p.default_feature.ECFP.enabled:
-            ecfp = {'radius': p.default_feature.ECFP.radius, 'nBits': p.default_feature.ECFP.nBits}
+        rdkit_cfg = self._build_rdkit_config()
 
         dataset = FeatureDataset(
             data_file=p.data_file,
             feature_list=list(p.feature_list),
             target_list=list(p.target_list),
             weight_file=p.weight_file,
-            mol_column=p.mol_column,
-            mol_format=p.mol_format,
-            ecfp=ecfp,
+            rdkit=rdkit_cfg,
         )
         dataset = self._target_transform(dataset)
 
-        # Save config snapshot for reprocess detection
         os.makedirs(os.path.join(p.path, 'processed'), exist_ok=True)
         self.param.to_yaml(os.path.join(p.path, 'processed/model_parameters.yml'))
         return dataset
+
+    def _build_rdkit_config(self) -> dict | None:
+        """Build the rdkit config dict from the nested dataclass structure.
+
+        Returns None when rdkit is disabled (no molecular features needed).
+        """
+        rdkit = self.param.default_feature.rdkit
+        if not rdkit.enabled:
+            return None
+        return {
+            'enabled': True,
+            'mol_column': rdkit.mol_column,
+            'mol_format': rdkit.mol_format,
+            'ecfp': {
+                'enabled': rdkit.ecfp.enabled,
+                'radius': rdkit.ecfp.radius,
+                'nBits': rdkit.ecfp.nBits,
+            },
+            'descriptors': {
+                'enabled': rdkit.descriptors.enabled,
+                'include': rdkit.descriptors.include,
+            },
+        }
 
     def _target_transform(self, dataset: FeatureDataset) -> FeatureDataset:
         """Apply target transformation in-place."""
@@ -124,7 +142,6 @@ class DataProcessing:
         """Normalize features and targets using mean/std from training set."""
         mean_f, std_f = self.norm_dict.get('feature', (None, None))
         mean_y, std_y = self.norm_dict['y']
-        # Squeeze singleton dimensions from mean/std computation
         if hasattr(self.dataset, 'features'):
             if mean_f is not None:
                 self.dataset.features = (self.dataset.features - mean_f.squeeze(0)) / std_f.squeeze(0)
@@ -137,7 +154,6 @@ class DataProcessing:
             state_dict: dict = torch.load(pretrained_model, map_location=torch.device('cpu'), weights_only=False)
             return state_dict['norm']
         else:
-            # Get training set tensors
             indices = self.train_dataset.indices
             train_feat = self.dataset.features[indices]
             train_y = self.dataset.targets[indices]

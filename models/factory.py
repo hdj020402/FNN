@@ -15,11 +15,9 @@ def create_model(param: ModelParams, dataset) -> FNN:
     """
     hidden_layers = list(param.hidden_layer)
 
-    # Compute input dimension
+    # Input / output dims inferred from the dataset (which already accounts for
+    # CSV features, ECFP bits, and RDKit descriptors).
     num_input = dataset.num_features
-    if param.default_feature.ECFP.enabled:
-        num_input += param.default_feature.ECFP.nBits
-
     num_output = dataset.num_targets
     dims = [num_input, *hidden_layers, num_output]
     net = FNN(dims)

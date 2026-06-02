@@ -18,7 +18,6 @@ from typing import Any, get_type_hints
 
 def _dict_to_dataclass(cls: type, d: dict) -> object:
     """Recursively convert a nested dict into the given dataclass type."""
-    # Use get_type_hints to resolve string annotations from __future__ import
     resolved_types = get_type_hints(cls)
     field_types = {f.name: resolved_types.get(f.name, f.type) for f in cls.__dataclass_fields__.values()}
     kwargs = {}
@@ -36,15 +35,39 @@ def _dict_to_dataclass(cls: type, d: dict) -> object:
 # ── Nested config classes ─────────────────────────────────────────────────────
 
 @dataclass
-class ECFPConfig:
+class EcfpConfig:
     enabled: bool = False
     radius: int = 2
     nBits: int = 1024
 
 
 @dataclass
+class DescriptorsConfig:
+    enabled: bool = False
+    # null (or absent) → RECOMMENDED set
+    # a list of descriptor names → use those exact descriptors
+    # 'all_2d' → every 2-D descriptor in rdkit_descriptors.ALL_2D
+    include: list[str] | str | None = None
+
+
+@dataclass
+class RdkitConfig:
+    """RDKit molecular feature generation.
+
+    All fields are ignored unless ``enabled`` is True.  When enabled,
+    ``mol_column`` is required and ``mol_format`` specifies how to parse
+    the strings in that column.
+    """
+    enabled: bool = False
+    mol_column: str | None = None
+    mol_format: str = "smiles"          # smiles | inchi
+    ecfp: EcfpConfig = field(default_factory=EcfpConfig)
+    descriptors: DescriptorsConfig = field(default_factory=DescriptorsConfig)
+
+
+@dataclass
 class DefaultFeatureConfig:
-    ECFP: ECFPConfig = field(default_factory=ECFPConfig)
+    rdkit: RdkitConfig = field(default_factory=RdkitConfig)
 
 
 @dataclass
@@ -76,8 +99,6 @@ class ModelParams:
     # ── Dataset ───────────────────────────────────────────────────────────
     path: str = "data"
     data_file: str = "data/data.csv"
-    mol_column: str | None = None       # CSV column with SMILES/InChI (for ECFP generation)
-    mol_format: str = "smiles"           # smiles / inchi
     weight_file: str | None = None
     default_feature: DefaultFeatureConfig = field(default_factory=DefaultFeatureConfig)
     feature_list: list[str] = field(default_factory=list)
@@ -126,7 +147,6 @@ class ModelParams:
 
     def to_yaml(self, path: str) -> None:
         """Save parameters to a YAML file."""
-        # Convert dataclass to dict, skipping runtime fields
         import dataclasses
         d = dataclasses.asdict(self)
         with open(path, 'w', encoding='utf-8') as f:
@@ -166,8 +186,6 @@ class HparamTuningParams:
     """Top-level hyperparameter tuning parameters — mirrors hparam_tuning.yml."""
 
     optuna: OptunaConfig = field(default_factory=OptunaConfig)
-    # Dynamic HPO search space entries (e.g. batch_size, lr, hidden_layer, ...)
-    # stored as extra fields captured during from_yaml
     _extra: dict[str, Any] = field(default_factory=dict, repr=False)
 
     @classmethod
@@ -176,7 +194,6 @@ class HparamTuningParams:
         with open(path, 'r', encoding='utf-8') as f:
             raw: dict = yaml.full_load(f)
         optuna_raw = raw.pop('optuna', {})
-        # Fix "continue" key collision with Python keyword
         if 'continue_trials' in optuna_raw:
             ct = optuna_raw['continue_trials']
             if 'continue' in ct:
@@ -187,7 +204,6 @@ class HparamTuningParams:
         return obj
 
     def __getitem__(self, key: str) -> Any:
-        """Access extra HPO search space entries by key."""
         return self._extra[key]
 
     def __contains__(self, key: str) -> bool:

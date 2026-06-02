@@ -6,14 +6,22 @@ seed: 42
 ### Dataset ###
 path: database/mp
 data_file: database/mp/attr_train.csv
-mol_column: SMILES   # CSV column with SMILES/InChI strings (used for ECFP)
-mol_format: smiles   # smiles / inchi
 weight_file: null
 default_feature:
-  ECFP:
-    enabled: True
-    radius: 2
-    nBits: 1024
+  rdkit:
+    enabled: false
+    mol_column: SMILES       # CSV column with SMILES/InChI strings
+    mol_format: smiles       # smiles / inchi
+    ecfp:
+      enabled: false
+      radius: 2
+      nBits: 1024
+    descriptors:
+      enabled: false
+      # null (or omit) → recommended set (~26 commonly used descriptors)
+      # [MolLogP, MolMR, ...] → custom list
+      # all_2d → every 2-D descriptor (~217)
+      include: null
 feature_list: [water_content,  H, C, O, 'N', F, S, Cl, Br, P,]
 target_list: ['mp']
 target_transform: LN   # LN / LG / E^-x
@@ -49,4 +57,3 @@ optim_criteria: 'MAE'
 
 ### Prediction ###
 dataset_range: test   # train / val / test / whole
-
