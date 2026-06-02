@@ -1,15 +1,16 @@
-"""Visualization utilities — scatter plots, histograms, bar charts, loss curves."""
+"""Visualization utilities — scatter plots, loss curves, model evaluation plots."""
+import os
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import numpy as np
 import torch
-import os
 from typing import Literal
 from numpy.typing import ArrayLike
 from functools import partial
+
+from utils.gen_model import gen_model
+from utils.evaluation import Evaluation
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -107,168 +108,11 @@ def loss_epoch(
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Correlation heatmap
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def corr_heatmap(
-    data: dict,
-    output_path: str,
-    annot: bool,
-    corr_method: Literal['pearson', 'kendall', 'spearman'] = 'pearson',
-):
-    """Correlation heatmap for feature analysis."""
-    length_list = [len(value) for value in data.values()]
-    assert min(length_list) == max(length_list), 'The data of features are not of the same length.'
-    corr = pd.DataFrame(data).corr(corr_method)
-    if len(data.keys()) < 10:
-        figsize = 10
-    else:
-        figsize = 50
-    plt.figure(figsize=(figsize, figsize), dpi=300)
-    sns.heatmap(corr, annot=annot, annot_kws={"size": 12}, vmin=-1, vmax=1, cmap="RdBu_r")
-    plt.xticks(rotation=45, fontsize=15)
-    plt.yticks(rotation=45, fontsize=15)
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Histogram
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def hist(
-    data: ArrayLike,
-    bins: int,
-    value_range: tuple,
-    output_path: str,
-    title: str = None,
-    xlabel: str = None,
-    ylabel: str = 'Frequency',
-):
-    """Histogram plot."""
-    plt.figure(dpi=300)
-    plt.hist(data, bins=bins, color='#03658C', alpha=1, range=value_range, edgecolor='white')
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Bar charts
-# ═══════════════════════════════════════════════════════════════════════════════
-
-def bar_2y(
-    data: dict[str, list[ArrayLike]],
-    labels: list,
-    bar_label: dict[str, list[str]],
-    xlabel: str,
-    output_path: str,
-    width: float = 0.2,
-    color_list: list[str] = None,
-    figsize: tuple[float, float] = (10.0, 10.0),
-    axis_fontsize: float = 14,
-    ylabel_fontsize: float = 16,
-    xlabel_fontsize: float = 16,
-    legend_fontsize: float = 10,
-    bbox_to_anchor: tuple[float, float] = (1.0, 1.0),
-    x_rotation: float = 0.0,
-    label_fontweight: Literal['normal', 'bold'] = 'normal',
-):
-    """Dual y-axis bar chart."""
-    if color_list is None:
-        color_list = ['#03788C', '#F27457', '#03488C', 'indianred', 'steelblue']
-    plt.rcParams['font.size'] = axis_fontsize
-    plt.rcParams['mathtext.fontset'] = 'custom'
-    fig = plt.figure(figsize=figsize, dpi=300)
-
-    num_bars = sum([len(i) for i in data.values()])
-    x = np.arange(len(labels))
-
-    i = 0
-    for key, value in data.items():
-        if i == 0:
-            ax_1 = fig.add_subplot(111)
-            ax_1.set_ylabel(key, fontsize=ylabel_fontsize, fontweight=label_fontweight)
-            for idx, d in enumerate(value):
-                ax_1.bar(
-                    x=x - (num_bars - 1 - 2 * i) * width / 2,
-                    height=d, color=color_list[i], width=width,
-                    label=bar_label[key][idx],
-                )
-                i += 1
-        else:
-            ax_2 = ax_1.twinx()
-            ax_2.set_ylabel(key, fontsize=ylabel_fontsize, fontweight=label_fontweight)
-            for idx, d in enumerate(value):
-                ax_2.bar(
-                    x=x - (num_bars - 1 - 2 * i) * width / 2,
-                    height=d, color=color_list[i], width=width,
-                    label=bar_label[key][idx],
-                )
-                i += 1
-    ax_1.set_xlabel(xlabel, fontsize=xlabel_fontsize, fontweight=label_fontweight)
-    fig.legend(bbox_to_anchor=bbox_to_anchor, bbox_transform=ax_1.transAxes, fontsize=legend_fontsize)
-    plt.xticks(x, labels=labels)
-    for tick in ax_1.get_xticklabels():
-        tick.set_rotation(x_rotation)
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
-
-
-def bar(
-    *args: ArrayLike,
-    labels: list[str],
-    bar_label: list[str],
-    ylabel: str,
-    xlabel: str,
-    output_path: str,
-    width: float = 0.3,
-    color_list: list[str] = None,
-    figsize: tuple = (10, 10),
-    axis_fontsize: float = 14,
-    ylabel_fontsize: float = 16,
-    xlabel_fontsize: float = 16,
-    legend_fontsize: float = 10,
-    bbox_to_anchor: tuple[float, float] = (1.0, 1.0),
-    x_rotation: float = 0.0,
-    label_fontweight: Literal['normal', 'bold'] = 'normal',
-):
-    """Single-axis bar chart."""
-    if color_list is None:
-        color_list = ['#03788C', '#F27457', '#03488C', 'indianred', 'steelblue']
-    plt.rcParams['font.size'] = axis_fontsize
-    plt.rcParams['mathtext.fontset'] = 'custom'
-    fig = plt.figure(figsize=figsize, dpi=300)
-
-    num_bars = len(args)
-    x = np.arange(len(labels))
-
-    ax_1 = fig.add_subplot(111)
-    ax_1.set_ylabel(ylabel, fontsize=ylabel_fontsize, fontweight=label_fontweight)
-    for i, data in enumerate(args):
-        ax_1.bar(
-            x=x - (num_bars - 1 - 2 * i) * width / 2,
-            height=data, color=color_list[i], width=width,
-            label=bar_label[i],
-        )
-    ax_1.set_xlabel(xlabel, fontsize=xlabel_fontsize, fontweight=label_fontweight)
-    fig.legend(bbox_to_anchor=bbox_to_anchor, bbox_transform=ax_1.transAxes, fontsize=legend_fontsize)
-    plt.xticks(x, labels=labels, rotation=x_rotation)
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
 # Scatter from saved model
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def scatterFromModel(model_path: str, param, DATA, output_dir: str):
     """Load a saved model and generate scatter plots on train/val/test sets."""
-    from utils.gen_model import gen_model
-    from utils.evaluation import Evaluation
-
     train_loader = DATA.train_loader
     val_loader = DATA.val_loader
     test_loader = DATA.test_loader
@@ -276,13 +120,10 @@ def scatterFromModel(model_path: str, param, DATA, output_dir: str):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = gen_model(param, DATA.dataset)
     try:
-        _model = torch.load(model_path, map_location=device, weights_only=False)
+        checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     except FileNotFoundError:
         return
-    if model_path.endswith('pkl'):
-        model = _model
-    elif model_path.endswith('pth'):
-        model.load_state_dict(_model['model'])
+    model.load_state_dict(checkpoint['model'])
     model.eval()
 
     eval_class = partial(

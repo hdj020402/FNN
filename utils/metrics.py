@@ -28,7 +28,7 @@ class Metrics:
 
     def S2(self, dim: int | None) -> torch.Tensor:
         """Variance of the target."""
-        return ((self.target - self.target.mean(dim=0)) ** 2).mean(dim=dim)
+        return ((self.target - self.target.mean(dim=dim)) ** 2).mean(dim=dim)
 
     def R2(self, dim: int | None) -> torch.Tensor:
         """Coefficient of Determination."""

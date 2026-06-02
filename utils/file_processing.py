@@ -14,6 +14,7 @@ from configs.schema import ModelParams, HparamTuningParams
 from data.dataset import FeatureDataset
 from utils.save_model import SaveModel
 from utils.timer import Timer
+from utils.utils import recursive_merge
 
 
 
@@ -52,7 +53,6 @@ class LogParser:
     def get_performance(self) -> dict:
         """Parse log and return merged performance dict (for loss-epoch plots)."""
         import re
-        from utils.utils import recursive_merge
         with open(self.log_file) as lf:
             text = lf.readlines()
         pattern = r'\{.*\}'
@@ -176,9 +176,6 @@ class FileProcessing:
             os.makedirs(self.model_dir, exist_ok=True)
             self.ckpt_dir = f'{self._base_dir}/model/checkpoint'
             os.makedirs(self.ckpt_dir, exist_ok=True)
-            recording_dir = f'outputs/training/{self.jobtype}/recording'
-            if not os.path.isdir(recording_dir):
-                os.makedirs(recording_dir, exist_ok=True)
             self.log_file = f'{self._base_dir}/training_{self.TIME}.log'
             self.training_logger = _setup_logger(f'training_{self.TIME}_logger', self.log_file)
 

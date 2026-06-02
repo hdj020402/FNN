@@ -45,11 +45,13 @@ def _compute_descriptors(mols: list, desc_names: list[str]) -> torch.Tensor:
     for mol in mols:
         row = []
         for name in desc_names:
-            try:
-                func = getattr(Descriptors, name)
-                row.append(float(func(mol)))
-            except Exception:
-                row.append(0.0)
+            func = getattr(Descriptors, name, None)
+            if func is None:
+                raise ValueError(
+                    f"Unknown RDKit descriptor: '{name}'. "
+                    f"See configs/rdkit_descriptors.py for the full list."
+                )
+            row.append(float(func(mol)))
         rows.append(row)
     return torch.tensor(rows, dtype=torch.float)
 

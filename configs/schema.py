@@ -9,9 +9,13 @@ Usage in main.py::
 """
 from __future__ import annotations
 
+import dataclasses
+import logging
 import yaml
 from dataclasses import dataclass, field
 from typing import Any, get_type_hints
+
+_log = logging.getLogger(__name__)
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────
@@ -23,6 +27,7 @@ def _dict_to_dataclass(cls: type, d: dict) -> object:
     kwargs = {}
     for k, v in d.items():
         if k not in field_types:
+            _log.warning("Unknown key '%s' in config — ignored (check for typos)", k)
             continue
         target = field_types[k]
         if hasattr(target, '__dataclass_fields__') and isinstance(v, dict):
@@ -148,7 +153,6 @@ class ModelParams:
 
     def to_yaml(self, path: str) -> None:
         """Save parameters to a YAML file."""
-        import dataclasses
         d = dataclasses.asdict(self)
         with open(path, 'w', encoding='utf-8') as f:
             yaml.dump(d, f, allow_unicode=True, sort_keys=False)

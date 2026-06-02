@@ -20,7 +20,6 @@ class DataProcessing:
     def __init__(self, param: ModelParams,
                  fold_indices: tuple[list[int], list[int]] | None = None) -> None:
         self.param = param
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.dataset = self._gen_dataset()
         if fold_indices is not None:
             train_idx, val_idx = fold_indices

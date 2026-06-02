@@ -266,8 +266,14 @@ def cross_validation(param: ModelParams) -> None:
     n_folds = param.n_folds
 
     # ── Determine dataset size (streaming line count — no CSV parsing) ──
-    with open(param.data_file) as f:
+    with open(param.data_file, encoding='utf-8') as f:
         n_samples = sum(1 for _ in f) - 1  # header row
+
+    if n_folds > n_samples:
+        raise ValueError(
+            f"n_folds ({n_folds}) cannot exceed the number of samples "
+            f"({n_samples})."
+        )
 
     folds = _kfold_indices(n_samples, n_folds, shuffle=True, seed=param.seed)
 

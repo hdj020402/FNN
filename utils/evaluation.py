@@ -66,7 +66,7 @@ class Evaluation:
         elif self.transform == 'LG':
             return 10 ** data
         elif self.transform == 'E^-x':
-            return -torch.log(data)
+            return -torch.log(data.clamp(min=1e-8))
         elif not self.transform:
             return data
         else:
