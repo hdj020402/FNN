@@ -9,6 +9,7 @@ Entry point. Behaviour is determined by ``param.mode``:
 import os
 import time
 import json
+import logging
 import torch
 import optuna
 import pandas as pd
@@ -25,7 +26,7 @@ from utils.evaluation import Evaluation
 from utils.metrics import Metrics
 from utils.optuna_setup import OptunaSetup
 from utils.train import train, validate
-from utils.file_processing import FileProcessing, LogParser
+from utils.file_processing import FileProcessing, LogParser, _setup_logger
 from utils.save_model import SaveModel
 from utils.timer import Timer
 from utils.gpu_monitor import GPUMonitor
@@ -265,15 +266,12 @@ def cross_validation(param: ModelParams) -> None:
     """
     n_folds = param.n_folds
 
-    # ── Build the dataset once to know its length ─────────────────────────
-    dp0 = DataProcessing(param)
-    n_samples = len(dp0.dataset)
+    # ── Determine dataset size (lightweight — just read CSV row count) ────
+    n_samples = len(pd.read_csv(param.data_file))
 
     folds = _kfold_indices(n_samples, n_folds, shuffle=True, seed=param.seed)
 
     # ── Output setup ──────────────────────────────────────────────────────
-    from utils.file_processing import _setup_logger
-    import logging
     base_dir = f'outputs/training/{param.jobtype}/{param.time}'
     os.makedirs(base_dir, exist_ok=True)
     param.to_yaml(f'{base_dir}/model_parameters.yml')
@@ -288,7 +286,6 @@ def cross_validation(param: ModelParams) -> None:
     for fold, (train_idx, val_idx) in enumerate(folds):
         summary_logger.info(f'--- Fold {fold + 1}/{n_folds} ---')
         fold_param = deepcopy(param)
-        fold_param.time = param.time
 
         result = training(fold_param, fold_indices=(train_idx, val_idx),
                           output_subdir=f'fold_{fold}')
