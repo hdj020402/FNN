@@ -1,6 +1,8 @@
 """File processing — output directory management, logging, training resume."""
 import os
+import re
 import json
+import yaml
 import shutil
 import logging
 import socket
@@ -52,7 +54,6 @@ class LogParser:
 
     def get_performance(self) -> dict:
         """Parse log and return merged performance dict (for loss-epoch plots)."""
-        import re
         with open(self.log_file) as lf:
             text = lf.readlines()
         pattern = r'\{.*\}'
@@ -153,7 +154,6 @@ class FileProcessing:
             os.makedirs(trial_dir, exist_ok=True)
             self.param.to_yaml(f'{trial_dir}/model_parameters.yml')
             if not os.path.exists(f'{self._base_dir}/hparam_tuning.yml') and self.ht_param is not None:
-                import yaml
                 with open(f'{self._base_dir}/hparam_tuning.yml', 'w', encoding='utf-8') as f:
                     yaml.dump(self.ht_param._extra, f, allow_unicode=True, sort_keys=False)
             self.plot_dir = f'{trial_dir}/plot'

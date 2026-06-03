@@ -7,7 +7,7 @@ A PyTorch-based Feedforward Neural Network toolkit for molecular property predic
 ### 1. Clone
 
 ```bash
-cp -r /home2/hdj/Toolkits/Machine_Learning/fnn .
+git clone https://github.com/hdj020402/FNN
 ```
 
 ### 2. Install
@@ -81,8 +81,11 @@ outputs/
 ```plain text
 fnn/
 ├── main.py                       # Entry point
+├── LICENSE                       # MIT License
+├── requirements.txt              # Python dependencies
 ├── configs/
 │   ├── schema.py                         # Typed configuration dataclasses
+│   ├── rdkit_descriptors.py              # RDKit molecular descriptor definitions
 │   ├── model_parameters.example.yaml     # Example model config
 │   └── hpo.example.yaml                  # Example HPO config
 ├── data/
